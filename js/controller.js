@@ -1,9 +1,12 @@
 function ThreeJsCtrl($scope, gcodeinterpreter, scene) {
     $scope.workpiece = {width: 300, height: 100, depth: 200};
 	$scope.tools = [{diameter: 10}, {diameter: 20}];
-	$scope.gcode = "g0 x0 y0 z10\nm6 t2\ng1 z-10\nx30\ny30\nx0\ny0\nm6 t1\ng1 z-110\nx30\ny30\nx0\ny0";
+	$scope.gcode = "g0 x0 y0 z10\nm6 t2\ng1 z-10\nx30\ny30\nx0\ny0\nm6 t1\ng1 z-20\nx30\ny30\nx0\ny0\nm6 t1\ng1 z-30\nx30\ny30\nx0\ny0\nm6 t1\ng1 z-110\nx30\ny30\nx0\ny0";
 	$scope.errorMessage = "";
 	$scope.unit = "mm";
+    $scope.isStopped = function() { return gcodeinterpreter.isStopped(); }
+    $scope.isPaused = function() { return gcodeinterpreter.isPaused(); }
+    $scope.isRunning = function() { return gcodeinterpreter.isRunning(); }
 	
 	$scope.setWorkpieceSize = function() {
 	  console.log("setWorkpieceSize");
@@ -30,9 +33,14 @@ function ThreeJsCtrl($scope, gcodeinterpreter, scene) {
 
 	$scope.run = function() {
 		try {
-			$scope.errorMessage = "";
-			gcodeinterpreter.setGCode($scope.gcode);
-			gcodeinterpreter.setTools($scope.tools)
+  		    if (gcodeinterpreter.isStopped()) {
+  		      $scope.errorMessage = "";
+  		      gcodeinterpreter.setGCode($scope.gcode);
+  		      gcodeinterpreter.setTools($scope.tools);
+  		    }
+			gcodeinterpreter.setStateChangeListener(function() {
+			  $scope.$digest();
+			});
 			gcodeinterpreter.run();
 		} catch(err) {
 			if (err instanceof SyntaxError) {
@@ -44,6 +52,10 @@ function ThreeJsCtrl($scope, gcodeinterpreter, scene) {
 		}
 	}
 	
+    $scope.pause = function() {
+      gcodeinterpreter.pause();
+    }
+    
     $scope.step = function() {
       if (gcodeinterpreter.isStopped()) {
         gcodeinterpreter.setGCode($scope.gcode);

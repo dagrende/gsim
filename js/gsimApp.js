@@ -3,7 +3,7 @@ angular.module('gsimApp', ['dr.sortable'])
   return Scene();
 })
 .factory('gcodeinterpreter', function(scene) {
-  return GCodeInterpreter(scene.getMachine());
+  return GCodeInterpreter(scene.getMachine(), scene);
 })
 .directive('threeCanvas', function(scene) {
   return {

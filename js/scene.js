@@ -12,6 +12,7 @@ function Scene() {
   var millMaterial = new THREE.MeshLambertMaterial({color: 0xff0000});
   var canvasEl;
   var camera, initialWorkpiece;
+  var renderLoopFunction;
 
   // create the WebGL renderer on the supplied canvas and all needed support
   // also creates a workpiece to mill into
@@ -73,6 +74,9 @@ function Scene() {
   function paint() {
     requestAnimationFrame(paint);
     controller.update();
+    if (renderLoopFunction != undefined) {
+      renderLoopFunction();
+    }
     if (changed) {
       renderer.render(scene, camera);
       changed = false;
@@ -188,8 +192,8 @@ function Scene() {
       }
     },
 
-    selectGCodeLine: function(lineNo) {
-      selectTextareaLine(document.getElementById('gcodeTextArea'), lineNo);
+    setRenderLoopFunction: function(callback) {
+      renderLoopFunction = callback;
     }
   }
 }

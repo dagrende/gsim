@@ -1,15 +1,17 @@
-function GCodeInterpreter(millingMachine) {
+function GCodeInterpreter(millingMachine, scene) {
   var STATES = {STOPPED: "stopped", RUNNING: "running", PAUSED: "paused"};
   var state = STATES.STOPPED;
   var gCode;
   var tools;
   var gCodeLines;
   var curGCodeLine;
+  var endGCodeLine;
   var ti = 1;
   var validPartStarts = "mgotxyzijkf";
   var partValueParser =   [intParser, intParser, stringParser, intParser, floatParser, floatParser, floatParser, floatParser, floatParser, floatParser, floatParser];
   var prevPos = {x:0, y:0, z:0};
   var partVal = {};
+  var stateChangeListener;
   
   function trim1 (str) {    // returns str with whitespace removed from both ends
     return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
@@ -23,16 +25,28 @@ function GCodeInterpreter(millingMachine) {
   // machine is {reset: function() {...}, millFromTo: function(from, to, ti) {...}}
   // supports g0, g1 and m6
   function runAll(machine) {
-    machine.reset();
-    for (var curGCodeLine in gCodeLines) {
-      runGCodeLine(curGCodeLine, machine);
+    if (state == STATES.STOPPED) {
+      machine.reset();
     }
+    state = STATES.RUNNING;
+    scene.setRenderLoopFunction(function() {
+      runGCodeLine(machine);
+      if (curGCodeLine >= gCodeLines.length || state != STATES.RUNNING) {
+        if (curGCodeLine >= gCodeLines.length) {
+          state = STATES.STOPPED;
+          if (stateChangeListener != undefined) {
+            stateChangeListener();
+          }
+        }
+        scene.setRenderLoopFunction(undefined);
+      }
+    })
   }
 
-  function runGCodeLine(i, machine) {
-    if (i < gCodeLines.length) {
+  function runGCodeLine(machine) {
+    if (curGCodeLine < gCodeLines.length) {
       delete partVal.m;
-      var line = trim1(gCodeLines[i]);
+      var line = trim1(gCodeLines[curGCodeLine]);
       if (line.length > 0) {
         var parts = line.split(' ');
         for (var j in parts) {
@@ -41,19 +55,19 @@ function GCodeInterpreter(millingMachine) {
           var partRest = part.substr(1);
           var partStartIndex = validPartStarts.indexOf(partStart);
           if (partStartIndex == -1) {
-            throw new SyntaxError("invalid g-code", i);
+            throw new SyntaxError("invalid g-code", curGCodeLine);
           }
           partVal[partStart] = partValueParser[partStartIndex](partRest);
         }
         if (partVal.m == 6) {
             if (partVal.t == undefined) {
-                throw new SyntaxError("missing t value for m6", i);
+                throw new SyntaxError("missing t value for m6", curGCodeLine);
             }
             ti = partVal.t;
         }
         if (partVal.g == 0 || partVal.g == 1) {
           if (partVal.x == undefined || partVal.y == undefined || partVal.z == undefined) {
-            throw new SyntaxError("missing x, y or z", i);
+            throw new SyntaxError("missing x, y or z", curGCodeLine);
           }
           if (partVal.g == 1) {
             machine.millFromTo(prevPos, partVal, tools[ti - 1]);
@@ -63,13 +77,14 @@ function GCodeInterpreter(millingMachine) {
           prevPos.z = partVal.z;
         }
       }
+      curGCodeLine++;
     }
   }
   
   return {
-    isStopped: function() {
-      return state == STATES.STOPPED;
-    },
+    isStopped: function() { return state == STATES.STOPPED; },
+    isPaused: function() { return state == STATES.PAUSED; },
+    isRunning: function() { return state == STATES.RUNNING; },
     
     setGCode: function(newGCode) {
       state = STATES.STOPPED;
@@ -83,13 +98,14 @@ function GCodeInterpreter(millingMachine) {
     },
     
     run: function() {
-      state = STATES.RUNNING;
       runAll(millingMachine);
-      state = STATES.STOPPED;
+    },
+    
+    setStateChangeListener: function(listener) {
+      stateChangeListener = listener;
     },
     
     pause: function() {
-      throw "GCodeInterpreter.step() not implemented yet"
       state = STATES.PAUSED;
     },
     
@@ -99,12 +115,13 @@ function GCodeInterpreter(millingMachine) {
         curGCodeLine = 0;
         state = STATES.PAUSED;
       }
-      runGCodeLine(curGCodeLine++, millingMachine);
+      if (curGCodeLine < gCodeLines.length) {
+        runGCodeLine(millingMachine);
+      }
     },
     
     stop: function() {
       state = STATES.STOPPED;
-      millingMachine.reset();
     },
     
     getCurrentLine: function() {

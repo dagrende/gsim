@@ -56,9 +56,10 @@
         </div>
         <div class="expandable">
           <div class="execution">
-            <input type="button" value="Run" ng-click="run()"/>
-            <input type="button" value="Step" ng-click="step()"/>
-            <input type="button" value="Stop" ng-click="stop()"/>
+            <input type="button" value="Run" ng-click="run()" ng-disabled="isRunning()"/>
+            <input type="button" value="Pause" ng-click="pause()" ng-disabled="isStopped() || isPaused()"/>
+            <input type="button" value="Step" ng-click="step()" ng-disabled="isRunning()"/>
+            <input type="button" value="Stop" ng-click="stop()" ng-disabled="isStopped()"/>
           </div>
           <textarea id="gcodeTextArea" ng-model="gcode" rows="10"></textarea>
           <div>
