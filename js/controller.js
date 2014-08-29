@@ -43,6 +43,7 @@ function ThreeJsCtrl($scope, gcodeinterpreter, scene) {
 			});
 			gcodeinterpreter.run();
 		} catch(err) {
+			console.log("error",err);
 			if (err instanceof SyntaxError) {
 				$scope.errorMessage = err.message;
 				selectTextareaLine(document.getElementById('gcodeTextArea'), err.lineNo);

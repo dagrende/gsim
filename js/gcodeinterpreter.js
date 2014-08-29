@@ -47,11 +47,11 @@ function GCodeInterpreter(millingMachine, scene) {
     if (curGCodeLine < gCodeLines.length) {
       delete partVal.m;
       var line = trim1(gCodeLines[curGCodeLine]);
-      if (line.length > 0) {
+      if (line.length > 0 && line.charAt(0) !== '(') {
         var parts = line.split(' ');
         for (var j in parts) {
           var part = parts[j];
-          var partStart = part.charAt(0);
+          var partStart = part.charAt(0).toLowerCase();
           var partRest = part.substr(1);
           var partStartIndex = validPartStarts.indexOf(partStart);
           if (partStartIndex == -1) {
